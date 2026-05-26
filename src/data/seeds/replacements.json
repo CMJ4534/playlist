@@ -1,0 +1,33 @@
+{
+  "$comment": "embed 제한 곡 → embed-safe 교체 매핑. verify:embed --suggest-replacements 또는 catalog:find-topic 으로 자동 추가 가능",
+  "replacements": {
+    "x6_Q2h3A7qY": {
+      "reason": "topic_channel_replacement (BTS 봄날)",
+      "replacement": { "youtubeId": "ZO1xdXOXarc" }
+    },
+    "hLQl3WQQo4U": {
+      "reason": "topic_channel_replacement (Adele Someone Like You)",
+      "replacement": { "youtubeId": "UQ8cXH7qbVU" }
+    },
+    "TdrL3QxjyVw": {
+      "reason": "topic_channel_replacement (Lana Del Rey Summertime Sadness)",
+      "replacement": { "youtubeId": "fRQg_9ulGuI" }
+    },
+    "mPVDGOVjRQ0": {
+      "reason": "topic_channel_replacement (BTS ON → ON feat. Sia Topic)",
+      "replacement": { "youtubeId": "AlwmaGcMjNE" }
+    },
+    "yKNxeF4KMs0": {
+      "reason": "topic_channel_replacement (Coldplay Yellow)",
+      "replacement": { "youtubeId": "9qnqYL0eNNI" }
+    },
+    "n0BGBbKhuLA": {
+      "reason": "topic_channel_replacement (IU Love poem)",
+      "replacement": { "youtubeId": "iOKRYIMhaDk" }
+    },
+    "7HDeem-JYzw": {
+      "reason": "topic_channel_replacement (IU eight)",
+      "replacement": { "youtubeId": "5_IYVichXbA" }
+    }
+  }
+}

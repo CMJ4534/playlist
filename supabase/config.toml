@@ -1,0 +1,11 @@
+# Moodplay Supabase local/dev config
+# https://supabase.com/docs/guides/cli/config
+
+[api]
+enabled = true
+
+[db]
+major_version = 15
+
+[functions.recommend]
+verify_jwt = false
