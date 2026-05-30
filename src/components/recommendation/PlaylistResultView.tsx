@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,15 +11,11 @@ import {
 } from 'react-native';
 
 import { moodTheme } from '@/constants/moodTheme';
-import {
-  signInWithGoogle,
-  isGoogleAuthConfigured,
-} from '@/services/googleAuth';
-import {
-  createPlaylist,
-  type RecommendResponse,
-} from '@/services/moodplayApi';
+import { isGoogleAuthConfigured } from '@/services/googleAuth';
+import type { RecommendResponse } from '@/services/moodplayApi';
 import { openYouTubeUrl, openYouTubeVideo } from '@/services/youtubeOpen';
+import { saveTracksAsPlaylist } from '@/services/youtubeApi';
+import { useAuthStore } from '@/stores/authStore';
 
 import { TrackListItem } from './TrackListItem';
 
@@ -26,42 +23,51 @@ type Props = {
   response: RecommendResponse;
 };
 
-type PlaylistStatus = 'idle' | 'signing_in' | 'creating' | 'done' | 'error';
+type SaveStatus = 'idle' | 'signing_in' | 'creating' | 'done' | 'error';
 
 export function PlaylistResultView({ response }: Props) {
   const { playback, emotionEmoji, emotionLabel, moodTag, diary } = response;
 
-  console.log('[FLOW][VIEW] PlaylistResultView rendered');
-  console.log('[FLOW][VIEW] videos:', playback.videos.length, 'tier:', playback.tier, 'emoji:', emotionEmoji);
+  const { isSignedIn, user, signIn, getValidToken } = useAuthStore();
 
-  const [playlistStatus, setPlaylistStatus] = useState<PlaylistStatus>('idle');
-  const [createdPlaylistUrl, setCreatedPlaylistUrl] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [savedPlaylistUrl, setSavedPlaylistUrl] = useState<string | null>(null);
+  const [savedCount, setSavedCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const trackCount = playback.videos.length;
   const hasVideos = trackCount > 0;
-  console.log('[FLOW][VIEW] hasVideos:', hasVideos, 'trackCount:', trackCount);
-  const isCreating = playlistStatus === 'signing_in' || playlistStatus === 'creating';
+  const isBusy = saveStatus === 'signing_in' || saveStatus === 'creating';
 
   const handlePlayFirst = () => {
     if (hasVideos) openYouTubeVideo(playback.videos[0].videoId);
   };
 
-  const handleCreatePlaylist = useCallback(async () => {
-    if (isCreating || !hasVideos) return;
+  const handleSavePlaylist = useCallback(async () => {
+    if (isBusy || !hasVideos) return;
     setErrorMessage(null);
 
     try {
-      setPlaylistStatus('signing_in');
-      const accessToken = await signInWithGoogle();
+      let token = getValidToken();
 
-      if (!accessToken) {
-        setPlaylistStatus('error');
-        setErrorMessage('Google 로그인이 필요합니다');
+      if (!token) {
+        setSaveStatus('signing_in');
+        const ok = await signIn();
+        if (!ok) {
+          setSaveStatus('error');
+          setErrorMessage('Google 로그인에 실패했습니다. 다시 시도해 주세요.');
+          return;
+        }
+        token = useAuthStore.getState().accessToken;
+      }
+
+      if (!token) {
+        setSaveStatus('error');
+        setErrorMessage('인증 토큰을 가져올 수 없습니다.');
         return;
       }
 
-      setPlaylistStatus('creating');
+      setSaveStatus('creating');
 
       const videoIds = playback.videos.map((v) => v.videoId);
       const title = `${emotionEmoji} ${emotionLabel} — MoodPlay`;
@@ -69,34 +75,55 @@ export function PlaylistResultView({ response }: Props) {
         ? `MoodPlay 감정 큐레이션: ${emotionLabel}\n"${diary}"`
         : `MoodPlay 감정 큐레이션: ${emotionLabel}`;
 
-      const result = await createPlaylist({ accessToken, videoIds, title, description });
+      const result = await saveTracksAsPlaylist(token, videoIds, title, description);
 
       if (result.success && result.playlistUrl) {
-        setCreatedPlaylistUrl(result.playlistUrl);
-        setPlaylistStatus('done');
+        setSavedPlaylistUrl(result.playlistUrl);
+        setSavedCount(result.addedCount);
+        setSaveStatus('done');
         Alert.alert(
-          '플레이리스트 생성 완료!',
-          `${result.videoCount}곡이 YouTube에 저장되었습니다.`,
+          '재생목록 저장 완료!',
+          `${result.addedCount}곡이 YouTube에 저장되었습니다.`,
           [
             { text: '확인', style: 'cancel' },
             { text: 'YouTube에서 열기', onPress: () => openYouTubeUrl(result.playlistUrl!) },
           ]
         );
       } else {
-        setPlaylistStatus('error');
-        setErrorMessage(result.error ?? '플레이리스트 생성에 실패했습니다');
+        setSaveStatus('error');
+        setErrorMessage(result.error ?? '재생목록 저장에 실패했습니다.');
       }
     } catch {
-      setPlaylistStatus('error');
+      setSaveStatus('error');
       setErrorMessage('오류가 발생했습니다. 다시 시도해 주세요.');
     }
-  }, [playback.videos, emotionEmoji, emotionLabel, diary, hasVideos, isCreating]);
+  }, [playback.videos, emotionEmoji, emotionLabel, diary, hasVideos, isBusy, signIn, getValidToken]);
 
   return (
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}>
+
+      {/* 로그인 상태 배너 */}
+      {isSignedIn && user ? (
+        <View style={styles.authBanner}>
+          {user.picture ? (
+            <Image source={{ uri: user.picture }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <Text style={styles.avatarText}>{user.name.charAt(0)}</Text>
+            </View>
+          )}
+          <View style={styles.authInfo}>
+            <Text style={styles.authName}>{user.name}</Text>
+            <Text style={styles.authEmail}>{user.email}</Text>
+          </View>
+          <View style={styles.authBadge}>
+            <Text style={styles.authBadgeText}>YouTube 연결됨</Text>
+          </View>
+        </View>
+      ) : null}
 
       {/* 플레이리스트 헤더 */}
       <View style={styles.header}>
@@ -115,7 +142,7 @@ export function PlaylistResultView({ response }: Props) {
         </View>
       ) : null}
 
-      {/* 곡 리스트 — 화면의 핵심 */}
+      {/* 곡 리스트 */}
       {hasVideos ? (
         <View style={styles.listContainer}>
           <View style={styles.listHeader}>
@@ -136,40 +163,58 @@ export function PlaylistResultView({ response }: Props) {
         </View>
       )}
 
-      {/* 하단 액션 */}
+      {/* 하단 액션 버튼들 */}
       <View style={styles.actions}>
-        {/* YouTube Playlist 저장 */}
-        {hasVideos && playlistStatus !== 'done' ? (
+
+        {/* Google 로그인 버튼 (미로그인 시) */}
+        {!isSignedIn && hasVideos ? (
           <Pressable
-            onPress={handleCreatePlaylist}
-            disabled={isCreating}
+            onPress={async () => {
+              if (!isGoogleAuthConfigured()) {
+                Alert.alert(
+                  'Google 설정 필요',
+                  'EXPO_PUBLIC_GOOGLE_CLIENT_ID 환경변수를 설정해주세요.\n\n자세한 방법은 README를 참고하세요.'
+                );
+                return;
+              }
+              await signIn();
+            }}
+            style={({ pressed }) => [styles.googleBtn, pressed && styles.btnPressed]}>
+            <Text style={styles.googleBtnLabel}>G  Google로 로그인</Text>
+          </Pressable>
+        ) : null}
+
+        {/* YouTube 재생목록 저장 */}
+        {hasVideos && saveStatus !== 'done' ? (
+          <Pressable
+            onPress={handleSavePlaylist}
+            disabled={isBusy}
             style={({ pressed }) => [
-              styles.createBtn,
+              styles.saveBtn,
               pressed && styles.btnPressed,
-              isCreating && styles.btnDisabled,
+              isBusy && styles.btnDisabled,
             ]}>
-            {isCreating ? (
+            {isBusy ? (
               <View style={styles.loadingRow}>
                 <ActivityIndicator size="small" color="#fff" />
-                <Text style={styles.createBtnLabel}>
-                  {playlistStatus === 'signing_in' ? 'Google 로그인 중...' : '저장 중...'}
+                <Text style={styles.saveBtnLabel}>
+                  {saveStatus === 'signing_in' ? 'Google 로그인 중...' : '재생목록 저장 중...'}
                 </Text>
               </View>
             ) : (
-              <Text style={styles.createBtnLabel}>
-                {isGoogleAuthConfigured()
-                  ? '📋 YouTube에 플레이리스트 저장'
-                  : '📋 YouTube에 플레이리스트 저장 (설정 필요)'}
+              <Text style={styles.saveBtnLabel}>
+                YouTube 재생목록으로 저장
               </Text>
             )}
           </Pressable>
         ) : null}
 
-        {playlistStatus === 'done' && createdPlaylistUrl ? (
+        {/* 저장 완료 후 열기 */}
+        {saveStatus === 'done' && savedPlaylistUrl ? (
           <Pressable
-            onPress={() => openYouTubeUrl(createdPlaylistUrl)}
+            onPress={() => openYouTubeUrl(savedPlaylistUrl)}
             style={({ pressed }) => [styles.openBtn, pressed && styles.btnPressed]}>
-            <Text style={styles.openBtnLabel}>✅ YouTube 플레이리스트 열기</Text>
+            <Text style={styles.openBtnLabel}>YouTube 재생목록 열기 ({savedCount}곡)</Text>
           </Pressable>
         ) : null}
 
@@ -177,11 +222,12 @@ export function PlaylistResultView({ response }: Props) {
           <Text style={styles.errorText}>{errorMessage}</Text>
         ) : null}
 
+        {/* 첫 곡 재생 */}
         {hasVideos ? (
           <Pressable
             onPress={handlePlayFirst}
             style={({ pressed }) => [styles.playBtn, pressed && styles.btnPressed]}>
-            <Text style={styles.playBtnLabel}>▶ 첫 곡 YouTube에서 재생</Text>
+            <Text style={styles.playBtnLabel}>첫 곡 YouTube에서 재생</Text>
           </Pressable>
         ) : null}
       </View>
@@ -197,6 +243,29 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: moodTheme.bg },
   content: { paddingHorizontal: 20, paddingBottom: 48 },
 
+  /* Auth 배너 */
+  authBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: moodTheme.surface, borderRadius: 12,
+    padding: 12, marginTop: 8, marginBottom: 4,
+    borderWidth: 1, borderColor: moodTheme.border,
+  },
+  avatar: { width: 36, height: 36, borderRadius: 18 },
+  avatarPlaceholder: {
+    backgroundColor: moodTheme.primary,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  authInfo: { flex: 1, gap: 2 },
+  authName: { fontSize: 14, fontWeight: '600', color: moodTheme.text },
+  authEmail: { fontSize: 11, color: moodTheme.textDim },
+  authBadge: {
+    backgroundColor: 'rgba(15,157,88,0.15)', borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 4,
+  },
+  authBadgeText: { fontSize: 11, color: '#0f9d58', fontWeight: '600' },
+
+  /* 헤더 */
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
     paddingTop: 12, paddingBottom: 16,
@@ -215,6 +284,7 @@ const styles = StyleSheet.create({
   },
   diaryText: { fontSize: 13, color: moodTheme.textDim, fontStyle: 'italic' },
 
+  /* 리스트 */
   listContainer: { marginBottom: 24 },
   listHeader: {
     flexDirection: 'row', justifyContent: 'space-between',
@@ -232,13 +302,20 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 16, fontWeight: '600', color: moodTheme.text },
   emptyHint: { fontSize: 13, color: moodTheme.textDim },
 
+  /* 버튼 영역 */
   actions: { gap: 10 },
 
-  createBtn: {
+  googleBtn: {
+    backgroundColor: '#4285F4', borderRadius: 14,
+    paddingVertical: 16, alignItems: 'center',
+  },
+  googleBtnLabel: { color: '#fff', fontSize: 16, fontWeight: '700' },
+
+  saveBtn: {
     backgroundColor: '#1a73e8', borderRadius: 14,
     paddingVertical: 16, alignItems: 'center',
   },
-  createBtnLabel: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  saveBtnLabel: { color: '#fff', fontSize: 16, fontWeight: '700' },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 
   openBtn: {

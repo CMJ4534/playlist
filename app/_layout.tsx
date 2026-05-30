@@ -70,6 +70,7 @@ function RootLayoutNav() {
             <Stack.Screen name="library/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="feed/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="player/index" options={{ headerShown: false }} />
+            <Stack.Screen name="login" options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
           </Stack>
           <ToastHost />

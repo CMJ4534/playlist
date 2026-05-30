@@ -7,6 +7,7 @@ const bundleId = 'com.moodplay.app';
 
 const config: ExpoConfig = {
   name: isProduction ? 'Moodplay' : 'Moodplay Dev',
+  owner: 'cmj4534',
   slug: 'moodplay',
   version: '1.0.0',
   orientation: 'portrait',
@@ -37,7 +38,10 @@ const config: ExpoConfig = {
     output: 'static',
     favicon: './assets/images/favicon.png',
   },
-  plugins: ['expo-router'],
+  plugins: [
+    'expo-router',
+    'expo-web-browser',
+  ],
   experiments: {
     typedRoutes: true,
   },
