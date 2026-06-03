@@ -2,9 +2,14 @@
   "name": "moodplay-backend",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts"
+    "build": "tsc",
+    "start": "node dist/index.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
