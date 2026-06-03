@@ -1,6 +1,13 @@
 import type { ExpoConfig } from 'expo/config';
+import { config as loadEnv } from 'dotenv';
+import path from 'path';
+
+// app.config 평가 시 .env.development 로드 (extra.backendUrl에 반영)
+loadEnv({ path: path.resolve(__dirname, '.env.development') });
+loadEnv({ path: path.resolve(__dirname, '.env.local'), override: true });
 
 const appEnv = process.env.APP_ENV ?? process.env.EXPO_PUBLIC_APP_ENV ?? 'development';
+const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL?.trim();
 const isProduction = appEnv === 'production';
 
 const bundleId = 'com.moodplay.app';
@@ -30,6 +37,8 @@ const config: ExpoConfig = {
       foregroundImage: './assets/images/adaptive-icon.png',
       backgroundColor: '#0B0D14',
     },
+    /** 개발 빌드·실기기에서 http://192.168.x.x:3001 API 허용 (Expo Go는 별도 정책) */
+    usesCleartextTraffic: true,
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
   },
@@ -47,6 +56,7 @@ const config: ExpoConfig = {
   },
   extra: {
     appEnv,
+    backendUrl,
     recommendationSource: process.env.EXPO_PUBLIC_RECOMMENDATION_SOURCE,
     eas: {
       projectId: process.env.EAS_PROJECT_ID,

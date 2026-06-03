@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmotionCard, RecommendLoadingOverlay } from '@/components/emotion';
 import { EMOTIONS, LOADING_MESSAGES } from '@/constants/emotions';
 import { moodTheme } from '@/constants/moodTheme';
-import { generateLocalRecommendation } from '@/services/localRecommendation';
+import { fetchAiRecommendation } from '@/services/recommendationApi';
 import type { EmotionId } from '@/types/emotion';
 
 export default function EmotionScreen() {
@@ -52,9 +52,14 @@ export default function EmotionScreen() {
     }, 900);
 
     try {
-      console.log('[FLOW] generating recommendation — emotion:', selectedId);
-      const result = generateLocalRecommendation(selectedId, diary || undefined);
-      console.log('[FLOW] recommendation generated — videos:', result.playback.videos.length);
+      console.log('[FLOW] generating AI recommendation — emotion:', selectedId);
+      const result = await fetchAiRecommendation(selectedId, diary || undefined);
+      console.log(
+        '[FLOW] recommendation ready — videos:',
+        result.playback.videos.length,
+        'source:',
+        result.meta.source
+      );
 
       const dataStr = JSON.stringify(result);
       console.log('[FLOW] navigating to /recommendation, data length:', dataStr.length);

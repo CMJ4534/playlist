@@ -44,7 +44,7 @@ export default function OnboardingScreen() {
 
   const finish = () => {
     complete();
-    router.replace('/(tabs)');
+    router.replace('/onboarding/taste');
   };
 
   const handleNext = () => {

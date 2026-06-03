@@ -64,6 +64,7 @@ function RootLayoutNav() {
             <Stack.Screen name="emotion/index" options={{ headerShown: false }} />
             <Stack.Screen name="recommendation/index" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding/index" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding/taste" options={{ headerShown: false }} />
             <Stack.Screen name="settings/index" options={{ headerShown: false }} />
             <Stack.Screen name="dev/index" options={{ headerShown: false }} />
             <Stack.Screen name="library/index" options={{ headerShown: false }} />

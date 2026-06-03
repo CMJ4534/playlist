@@ -31,5 +31,5 @@ app.listen(PORT, () => {
   console.log(`   POST /api/recommend  — 감정 기반 큐레이션 플레이리스트`);
   console.log(`   POST /api/playlist   — YouTube 플레이리스트 저장 (OAuth)`);
   console.log(`   GET  /api/recommend/health — 상태 확인\n`);
-  console.log(`   추천 = 내부 카탈로그 (YouTube 검색 없음)\n`);
+  console.log(`   추천 = Gemini + YouTube (키 없으면 내부 카탈로그 fallback)\n`);
 });
