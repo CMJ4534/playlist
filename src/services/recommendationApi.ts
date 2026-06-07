@@ -1,25 +1,47 @@
-import { generateLocalRecommendation } from '@/services/localRecommendation';
-import { fetchRecommendation, type RecommendResponse } from '@/services/moodplayApi';
-import { getTastePreferencesPayload } from '@/stores/tastePreferencesStore';
+import type { RecommendResponse } from '@/services/moodplayApi';
+import {
+  buildLocalFallback,
+  commitRecommendationResult,
+  runStrategyRecommendation,
+  runStrategyRetryRecommendation,
+  type StrategyRecommendationOptions,
+} from '@/services/strategy/recommendStrategyLayer';
 import type { EmotionId } from '@/types/emotion';
 
+async function withLocalFallback(
+  emotionId: EmotionId,
+  diary: string | undefined,
+  run: () => Promise<RecommendResponse>
+): Promise<RecommendResponse> {
+  try {
+    return await run();
+  } catch (err) {
+    console.warn('[recommendationApi] API failed, using local fallback:', err);
+    const fallback = buildLocalFallback(emotionId, diary);
+    commitRecommendationResult(fallback);
+    return fallback;
+  }
+}
+
 /**
- * Backend AI 추천 (Gemini + YouTube) → 실패 시 localRecommendation fallback.
+ * Backend AI 추천 (Strategy Layer → Gemini + YouTube) → 실패 시 localRecommendation fallback.
  */
 export async function fetchAiRecommendation(
   emotionId: EmotionId,
+  diary?: string,
+  options?: StrategyRecommendationOptions
+): Promise<RecommendResponse> {
+  return withLocalFallback(emotionId, diary, () =>
+    runStrategyRecommendation(emotionId, diary, options)
+  );
+}
+
+/** 재추천 — 동일 session에서 strategy 재선택 */
+export async function fetchAiRecommendationRetry(
+  emotionId: EmotionId,
   diary?: string
 ): Promise<RecommendResponse> {
-  const tastePreferences = getTastePreferencesPayload() ?? undefined;
-
-  try {
-    return await fetchRecommendation(
-      emotionId,
-      diary?.trim() || undefined,
-      tastePreferences
-    );
-  } catch (err) {
-    console.warn('[recommendationApi] API failed, using local fallback:', err);
-    return generateLocalRecommendation(emotionId, diary?.trim() || undefined);
-  }
+  return withLocalFallback(emotionId, diary, () =>
+    runStrategyRetryRecommendation(emotionId, diary)
+  );
 }

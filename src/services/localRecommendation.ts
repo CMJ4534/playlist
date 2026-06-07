@@ -100,18 +100,52 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+function pickTracks(
+  tracks: CuratedTrack[],
+  count: number,
+  options?: { excludeVideoIds?: string[]; attemptOffset?: number }
+): CuratedTrack[] {
+  const exclude = new Set(options?.excludeVideoIds ?? []);
+  const attemptOffset = options?.attemptOffset ?? 0;
+
+  let pool = tracks.filter((t) => !exclude.has(t.videoId));
+
+  if (pool.length < count) {
+    const shuffled = shuffle(tracks);
+    const start = shuffled.length > 0 ? attemptOffset % shuffled.length : 0;
+    pool = [...shuffled.slice(start), ...shuffled.slice(0, start)];
+  } else {
+    pool = shuffle(pool);
+    if (attemptOffset > 0 && pool.length > count) {
+      const start = attemptOffset % pool.length;
+      pool = [...pool.slice(start), ...pool.slice(0, start)];
+    }
+  }
+
+  return pool.slice(0, count);
+}
+
+export type LocalRecommendationOptions = {
+  excludeVideoIds?: string[];
+  attemptOffset?: number;
+};
+
 export function generateLocalRecommendation(
   emotion: string,
-  diary?: string
+  diary?: string,
+  options?: LocalRecommendationOptions
 ): RecommendResponse {
-  console.log('[FLOW][LOCAL] generateLocalRecommendation:', emotion);
+  console.log('[FLOW][LOCAL] generateLocalRecommendation:', emotion, {
+    exclude: options?.excludeVideoIds?.length ?? 0,
+    attempt: options?.attemptOffset ?? 0,
+  });
 
   const tracks = CATALOG[emotion] ?? CATALOG.blank;
   const profile = EMOTION_PROFILES[emotion] ?? EMOTION_PROFILES.blank;
 
-  const shuffled = shuffle(tracks).slice(0, 10);
+  const picked = pickTracks(tracks, 10, options);
 
-  const videos: VideoItem[] = shuffled.map((t) => ({
+  const videos: VideoItem[] = picked.map((t) => ({
     videoId: t.videoId,
     title: t.title,
     artist: t.artist,

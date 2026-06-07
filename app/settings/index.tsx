@@ -1,17 +1,23 @@
 import Constants from 'expo-constants';
-import { Link, Stack } from 'expo-router';
+import { Link, Stack, router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { isBetaQaEnabled } from '@/constants/beta';
 import { moodTheme } from '@/constants/moodTheme';
 import { LIBRARY_LIST_HREF } from '@/lib/navigation';
+import { useTastePreferencesStore } from '@/stores/tastePreferencesStore';
 
 export default function SettingsScreen() {
   const version = Constants.expoConfig?.version ?? '1.0.0';
   const env =
     process.env.EXPO_PUBLIC_APP_ENV ?? process.env.APP_ENV ?? 'development';
   const showBeta = isBetaQaEnabled();
+
+  const openTasteOnboarding = () => {
+    useTastePreferencesStore.getState().resetTasteOnboarding();
+    router.push('/onboarding/taste');
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -36,6 +42,13 @@ export default function SettingsScreen() {
             <Text style={styles.linkSub}>다시 듣기 · 감성 카드 공유</Text>
           </Pressable>
         </Link>
+
+        <Pressable
+          onPress={openTasteOnboarding}
+          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}>
+          <Text style={styles.linkTitle}>내 음악 취향</Text>
+          <Text style={styles.linkSub}>장르 · 좋아하는 아티스트 다시 설정</Text>
+        </Pressable>
 
         {showBeta ?
           <Link href="/dev" asChild>

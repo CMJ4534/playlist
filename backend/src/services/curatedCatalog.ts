@@ -103,14 +103,39 @@ function shuffle<T>(arr: T[]): T[] {
 
 export function getCuratedPlaylist(
   emotionId: EmotionId,
-  count: number = 10
+  count: number = 10,
+  options?: {
+    excludeVideoIds?: string[];
+    attemptOffset?: number;
+  }
 ): CuratedTrack[] {
   const tracks = CATALOG[emotionId] ?? CATALOG.blank;
   const withThumbnails = tracks.map((t) => ({
     ...t,
     thumbnailUrl: t.thumbnailUrl || buildThumbnail(t.videoId),
   }));
-  return shuffle(withThumbnails).slice(0, count);
+
+  const exclude = new Set(options?.excludeVideoIds ?? []);
+  const attemptOffset = options?.attemptOffset ?? 0;
+
+  let pool = withThumbnails.filter((t) => !exclude.has(t.videoId));
+
+  if (pool.length < count) {
+    const rotated = rotateList(shuffle(withThumbnails), attemptOffset);
+    return rotated.slice(0, count);
+  }
+
+  pool = shuffle(pool);
+  if (attemptOffset > 0) {
+    pool = rotateList(pool, attemptOffset);
+  }
+  return pool.slice(0, count);
+}
+
+function rotateList<T>(arr: T[], offset: number): T[] {
+  if (arr.length === 0) return arr;
+  const start = offset % arr.length;
+  return [...arr.slice(start), ...arr.slice(0, start)];
 }
 
 export function getCatalogSize(emotionId: EmotionId): number {

@@ -21,11 +21,13 @@ import { TrackListItem } from './TrackListItem';
 
 type Props = {
   response: RecommendResponse;
+  onRetry?: () => void;
+  retrying?: boolean;
 };
 
 type SaveStatus = 'idle' | 'signing_in' | 'creating' | 'done' | 'error';
 
-export function PlaylistResultView({ response }: Props) {
+export function PlaylistResultView({ response, onRetry, retrying = false }: Props) {
   const { playback, emotionEmoji, emotionLabel, moodTag, diary } = response;
 
   const { isSignedIn, user, signIn, getValidToken } = useAuthStore();
@@ -165,6 +167,23 @@ export function PlaylistResultView({ response }: Props) {
 
       {/* 하단 액션 버튼들 */}
       <View style={styles.actions}>
+        {onRetry && hasVideos ? (
+          <Pressable
+            onPress={onRetry}
+            disabled={retrying}
+            style={({ pressed }) => [
+              styles.retryBtn,
+              pressed && styles.btnPressed,
+              retrying && styles.btnDisabled,
+            ]}>
+            {retrying ?
+              <View style={styles.loadingRow}>
+                <ActivityIndicator size="small" color={moodTheme.primary} />
+                <Text style={styles.retryBtnLabel}>다른 곡 추천 중...</Text>
+              </View>
+            : <Text style={styles.retryBtnLabel}>🔄 다른 곡 추천받기</Text>}
+          </Pressable>
+        ) : null}
 
         {/* Google 로그인 버튼 (미로그인 시) */}
         {!isSignedIn && hasVideos ? (
@@ -304,6 +323,16 @@ const styles = StyleSheet.create({
 
   /* 버튼 영역 */
   actions: { gap: 10 },
+
+  retryBtn: {
+    backgroundColor: moodTheme.surface,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: moodTheme.primary,
+  },
+  retryBtnLabel: { color: moodTheme.primary, fontSize: 16, fontWeight: '700' },
 
   googleBtn: {
     backgroundColor: '#4285F4', borderRadius: 14,

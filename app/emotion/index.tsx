@@ -53,7 +53,9 @@ export default function EmotionScreen() {
 
     try {
       console.log('[FLOW] generating AI recommendation — emotion:', selectedId);
-      const result = await fetchAiRecommendation(selectedId, diary || undefined);
+      const result = await fetchAiRecommendation(selectedId, diary || undefined, {
+        resetSession: true,
+      });
       console.log(
         '[FLOW] recommendation ready — videos:',
         result.playback.videos.length,

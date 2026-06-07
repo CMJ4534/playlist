@@ -11,6 +11,8 @@ import { useUserLibraryStore } from '@/stores/userLibraryStore';
 import { useFeedbackPromptStore } from '@/stores/feedbackPromptStore';
 import { useRevisitStore } from '@/stores/revisitStore';
 import { useOnboardingStore } from '@/stores/onboardingStore';
+import { useTastePreferencesStore } from '@/stores/tastePreferencesStore';
+import { useMoodStrategySessionStore } from '@/stores/moodStrategySessionStore';
 import { useRecommendationSessionStore } from '@/stores/recommendationSessionStore';
 
 const MOODPLAY_PREFIXES = [
@@ -47,6 +49,8 @@ export async function resetMoodplayLocalStorage(): Promise<string[]> {
   useRecommendationSessionStore.getState().clear();
   usePlayerStore.getState().setQueue([], 0);
   useOnboardingStore.getState().resetOnboarding();
+  useTastePreferencesStore.getState().resetTasteOnboarding();
+  useMoodStrategySessionStore.getState().clearSession();
 
   return toRemove;
 }

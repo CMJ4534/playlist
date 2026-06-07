@@ -1,4 +1,4 @@
-import type { RecommendApiResponse } from '../types/recommend.js';
+import type { RecommendApiResponse, StrategyRequestContext } from '../types/recommend.js';
 import { getCuratedPlaylist } from './curatedCatalog.js';
 import {
   getEmotionProfile,
@@ -8,15 +8,23 @@ import {
 
 const TARGET_PLAYLIST_SIZE = 10;
 
-/** Gemini·YouTube 실패 시 기존 내부 카탈로그 */
+/** Gemini·YouTube 실패 시 내부 카탈로그 (재추천 시 exclude·attempt 반영) */
 export function buildCuratedRecommendResponse(
   emotionId: EmotionId,
   diary: string | null,
-  source = 'curated_catalog'
+  source = 'curated_catalog',
+  strategyContext?: StrategyRequestContext
 ): RecommendApiResponse {
   const profile = getEmotionProfile(emotionId);
   const moodTag = getMoodTag(emotionId);
-  const tracks = getCuratedPlaylist(emotionId, TARGET_PLAYLIST_SIZE);
+
+  const excludeVideoIds = strategyContext?.excludeVideoIds ?? [];
+  const attemptOffset = strategyContext?.attemptCount ?? 0;
+
+  const tracks = getCuratedPlaylist(emotionId, TARGET_PLAYLIST_SIZE, {
+    excludeVideoIds,
+    attemptOffset,
+  });
 
   const videos = tracks.map((t) => ({
     videoId: t.videoId,

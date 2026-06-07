@@ -17,6 +17,20 @@ type TastePreferencesStore = TastePreferencesPayload & {
 
 const EMPTY_ARTISTS: [string, string, string] = ['', '', ''];
 
+function hasValidTasteData(state: {
+  favoriteGenres: MusicGenreId[];
+  favoriteArtists: [string, string, string];
+}): boolean {
+  if (state.favoriteGenres.length === 0) return false;
+  return state.favoriteArtists.every((a) => a.trim().length > 0);
+}
+
+/** 온보딩 게이트 — 플래그 + 실제 입력값 모두 확인 */
+export function isTasteProfileComplete(): boolean {
+  const state = useTastePreferencesStore.getState();
+  return state.hasCompletedTasteOnboarding && hasValidTasteData(state);
+}
+
 export const useTastePreferencesStore = create<TastePreferencesStore>()(
   persist(
     (set) => ({
@@ -56,21 +70,25 @@ export const useTastePreferencesStore = create<TastePreferencesStore>()(
       name: 'moodplay-taste-preferences',
       storage: createJSONStorage(() => AsyncStorage),
       version: 1,
+      onRehydrateStorage: () => (state) => {
+        if (!state?.hasCompletedTasteOnboarding) return;
+        if (!hasValidTasteData(state)) {
+          state.hasCompletedTasteOnboarding = false;
+          state.completedAt = null;
+        }
+      },
     }
   )
 );
 
 /** 추천 API body용 */
 export function getTastePreferencesPayload(): TastePreferencesPayload | null {
-  const { favoriteGenres, favoriteArtists, hasCompletedTasteOnboarding } =
-    useTastePreferencesStore.getState();
+  const { favoriteGenres, favoriteArtists } = useTastePreferencesStore.getState();
 
-  if (!hasCompletedTasteOnboarding || favoriteGenres.length === 0) {
+  if (!isTasteProfileComplete()) {
     return null;
   }
 
   const artists = favoriteArtists.map((a) => a.trim()) as [string, string, string];
-  if (artists.some((a) => !a)) return null;
-
   return { favoriteGenres, favoriteArtists: artists };
 }

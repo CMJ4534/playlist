@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 import { resolveApiBase } from '@/constants/apiConfig';
 
 import type { TastePreferencesPayload } from '@/types/tastePreferences';
+import type { StrategyRequestContext } from '@/types/moodStrategy';
 
 const RECOMMEND_TIMEOUT_MS = 45_000;
 
@@ -43,15 +44,17 @@ export type RecommendRequestBody = {
   emotion: string;
   diary?: string;
   tastePreferences?: TastePreferencesPayload;
+  strategyContext?: StrategyRequestContext;
 };
 
 /**
- * 감정 + 일기 + 취향 기반 AI 플레이리스트 추천 (backend /api/recommend).
+ * 감정 + 일기 + 취향 + Strategy 컨텍스트 기반 AI 플레이리스트 추천.
  */
 export async function fetchRecommendation(
   emotion: string,
   diary?: string,
-  tastePreferences?: TastePreferencesPayload
+  tastePreferences?: TastePreferencesPayload,
+  strategyContext?: StrategyRequestContext
 ): Promise<RecommendResponse> {
   console.log('ENV_BACKEND_URL =', process.env.EXPO_PUBLIC_BACKEND_URL);
   console.log('EXPO_EXTRA_BACKEND_URL =', Constants.expoConfig?.extra?.backendUrl);
@@ -64,6 +67,7 @@ export async function fetchRecommendation(
     emotion,
     ...(diary?.trim() ? { diary: diary.trim() } : {}),
     ...(tastePreferences ? { tastePreferences } : {}),
+    ...(strategyContext ? { strategyContext } : {}),
   };
 
   console.log('[FLOW][API] resolved apiBase:', apiBase);
